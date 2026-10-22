@@ -4,4 +4,23 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "google-genai>=2.31.0",
+    "fastapi>=0.115.0",
+    "langchain-core>=1.6.12",
+    "langchain-google-genai>=4.4.2",
+    "langchain-groq>=1.1.2",
+    "langgraph>=1.2.16",
+    "langsmith>=0.14.9,<1",
+    "mcp>=1.26.0,<2",
+    "pydantic>=2.14.1",
+    "pypdf>=6.21.1",
+    "python-dotenv>=1.2.4",
+    "tavily-python>=0.8.5",
+    "uvicorn>=0.30.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
