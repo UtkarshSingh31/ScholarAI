@@ -74,3 +74,10 @@ class OpportunityFacts(BaseModel):
     claims: list[RequirementClaim] = Field(
         description="Extracted requirements and relevant factual claims."
     )
+
+
+class RecommendationReview(BaseModel):
+    overall_assessment: Literal["supported", "mixed", "insufficient_evidence"]
+    concerns: list[str] = Field(default_factory=list)
+    strengths: list[str] = Field(default_factory=list)
+    required_checks: list[str] = Field(default_factory=list)
