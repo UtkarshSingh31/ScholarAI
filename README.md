@@ -16,6 +16,21 @@ runs a multi-agent workflow to:
 The application is intentionally conservative: missing or incomparable evidence
 is reported as `unknown`, not as proof of eligibility.
 
+## Live deployment
+
+The current combined frontend and backend deployment is:
+
+<https://scholarai-amsd.onrender.com/>
+
+Useful live endpoints:
+
+- Dashboard: <https://scholarai-amsd.onrender.com/>
+- Health: <https://scholarai-amsd.onrender.com/health>
+- API documentation: <https://scholarai-amsd.onrender.com/docs>
+
+Because the dashboard and API share the same origin, the browser uses relative
+API paths and no separate Vercel frontend or CORS configuration is required.
+
 ## Current architecture
 
 The project is a Python/FastAPI application. The dashboard is a static HTML
@@ -239,44 +254,97 @@ paths.
 
 ### Recommended first deployment: Render
 
-Render is a straightforward option because it can run one Python web service
-and provides environment-variable management.
+Deploy this repository as one Render **Web Service**. The dashboard and API
+run in the same process; do not create a separate frontend service.
 
-Create a **Web Service** connected to this repository with:
+#### Option A: deploy from `render.yaml` (recommended)
 
-- **Runtime:** Python
-- **Build command:**
+The repository contains [`render.yaml`](./render.yaml), which already defines
+the service, root directory, Python version, build command, start command,
+health check, and non-secret defaults.
 
-  ```text
-  pip install .
-  ```
+1. Push the repository to GitHub.
+2. In Render, select **New +** → **Blueprint**.
+3. Connect the GitHub repository and select the branch to deploy.
+4. Render detects `render.yaml`. Confirm the service name `scholarai`.
+5. Enter values for the secret variables when Render asks:
+   `TAVILY_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, and optionally
+   `LANGSMITH_API_KEY`.
 
-- **Start command:**
+   For the currently deployed service, the public application base URL is
+   `https://scholarai-amsd.onrender.com`. It is intentionally not hardcoded into
+   the frontend JavaScript because the combined deployment can use relative paths
+   and local development continues to work with `http://127.0.0.1:8000`.
+6. Select **Apply**. Render installs dependencies, starts Uvicorn, and checks
+   `/health`.
 
-  ```text
-  uvicorn app.api:app --host 0.0.0.0 --port $PORT
-  ```
+#### Option B: enter the Render fields manually
 
-- **Health check path:** `/health`
+If creating **New +** → **Web Service** instead of using the Blueprint, use
+these exact values:
 
-Add these environment variables in the Render dashboard:
+| Render field | Value |
+|---|---|
+| Repository | `UtkarshSingh31/ScholarAI` |
+| Branch | Your deployment branch, normally `main` |
+| Service name | `scholarai` |
+| Language/runtime | `Python 3` |
+| Root Directory | Leave blank (repository root) |
+| Build Command | `pip install --upgrade pip && pip install .` |
+| Start Command | `uvicorn app.api:app --host 0.0.0.0 --port $PORT` |
+| Instance type | Free for a demo; paid for a continuously available service |
+| Health Check Path | `/health` |
+| Auto-Deploy | Yes, if you want pushes to deploy automatically |
+
+Do not set the root directory to `app`. The root must contain
+`pyproject.toml`, `README.md`, `render.yaml`, and the `app/` package. Do not
+use `python app/main.py` or `uvicorn main:app`; the correct ASGI target is
+`app.api:app`.
+
+#### Render environment variables
+
+In **Environment → Environment Variables**, add:
+
+| Key | Value |
+|---|---|
+| `PYTHON_VERSION` | `3.12.8` |
+| `TAVILY_API_KEY` | Your Tavily API key |
+| `GOOGLE_API_KEY` | Your Gemini API key |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` |
+| `GROQ_API_KEY` | Your Groq API key |
+| `GROQ_MODEL` | `openai/gpt-oss-20b` |
+| `LANGSMITH_API_KEY` | Optional LangSmith API key |
+| `LANGSMITH_PROJECT` | `ScholarAI` |
+
+Enter secret values directly in Render. Never commit them to
+[`example.env`](./example.env), GitHub, or `render.yaml`.
+
+#### Verify the deployment
+
+After the first deploy, open the live service URL and check these endpoints:
 
 ```text
-TAVILY_API_KEY
-GOOGLE_API_KEY
-GEMINI_MODEL=gemini-3.5-flash-lite
-GROQ_API_KEY
-GROQ_MODEL=openai/gpt-oss-20b
-LANGSMITH_API_KEY       # optional
-LANGSMITH_PROJECT=ScholarAI
+https://scholarai-amsd.onrender.com/health
+https://scholarai-amsd.onrender.com/
+https://scholarai-amsd.onrender.com/docs
 ```
 
-Render provides one URL for both the dashboard and API:
+The health endpoint should return:
+
+```json
+{"status":"ok"}
+```
+
+Then submit one small test profile from the dashboard. Watch **Logs** in
+Render if the job fails. Provider errors usually mean a missing/invalid
+environment variable or an exhausted provider quota.
+
+This deployment provides one URL for both the dashboard and API:
 
 ```text
-https://your-service.onrender.com/
-https://your-service.onrender.com/docs
-https://your-service.onrender.com/health
+https://scholarai-amsd.onrender.com/
+https://scholarai-amsd.onrender.com/docs
+https://scholarai-amsd.onrender.com/health
 ```
 
 The MCP server runs as a child process inside the web service, so the deployed
