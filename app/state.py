@@ -29,4 +29,6 @@ class ScholarshipState(TypedDict):
 
     # Supervisor routing state
     supervisor_retries: int
+    supervisor_retry_counts: dict[str, int]
+    supervisor_steps: int
     supervisor_decision: dict[str, Any]

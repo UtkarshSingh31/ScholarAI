@@ -15,3 +15,4 @@ def test_submit_job_exposes_queued_job(monkeypatch):
     assert job is not None
     assert job["job_id"] == job_id
     assert job["status"] == "queued"
+    assert job["events"] == []

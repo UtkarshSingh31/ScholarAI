@@ -9,6 +9,8 @@ from app.schemas import SupervisorDecision
 from app.state import ScholarshipState
 
 SupervisorPhase = Literal["profile", "hunter", "evidence", "auditor"]
+MAX_RETRIES_PER_PHASE = 2
+MAX_SUPERVISOR_STEPS = 8
 
 
 def supervisor_agent(
@@ -20,13 +22,15 @@ def supervisor_agent(
     opportunities = state.get("opportunities", [])
     evidence = state.get("evidence", [])
     eligibility = state.get("eligibility_results", [])
-    retries = state.get("supervisor_retries", 0)
-    previous_phase = state.get(
-        "supervisor_decision",
-        {},
-    ).get("phase")
-    if previous_phase != phase:
-        retries = 0
+    retry_counts = dict(state.get("supervisor_retry_counts", {}))
+    previous_decision = state.get("supervisor_decision", {})
+    retries = retry_counts.get(phase, 0)
+    if (
+        phase not in retry_counts
+        and previous_decision.get("phase") == phase
+    ):
+        retries = state.get("supervisor_retries", 0)
+    steps = state.get("supervisor_steps", 0)
     summary = {
         "phase": phase,
         "profile_valid": state.get("profile_valid", False),
@@ -81,6 +85,30 @@ def supervisor_agent(
             f"Supervisor decision failed: {type(exc).__name__}: {exc}"
         )
 
+    allowed_actions = {
+        "profile": {"continue", "stop"},
+        "hunter": {"continue", "retry_search", "stop"},
+        "evidence": {
+            "continue",
+            "retry_evidence",
+            "retry_search",
+            "stop",
+        },
+        "auditor": {
+            "continue",
+            "retry_evidence",
+            "retry_search",
+            "stop",
+        },
+    }[phase]
+
+    if decision is not None and decision.next_action not in allowed_actions:
+        error = (
+            f"Supervisor returned invalid action {decision.next_action!r} "
+            f"for phase {phase}."
+        )
+        decision = None
+
     if decision is None:
         if phase == "profile":
             action = "continue" if state.get("profile_valid") else "stop"
@@ -100,17 +128,29 @@ def supervisor_agent(
         decision_data = decision.model_dump()
 
     action = decision_data["next_action"]
+    steps += 1
+    if steps > MAX_SUPERVISOR_STEPS:
+        action = "stop"
+        decision_data = {
+            "next_action": action,
+            "reason": (
+                "Supervisor step limit reached; stopping to prevent "
+                "workflow looping."
+            ),
+        }
+
     if action in {"retry_search", "retry_evidence"}:
-        if retries >= 2:
+        if retries >= MAX_RETRIES_PER_PHASE:
             decision_data = {
                 "next_action": "stop",
                 "reason": (
-                    "Supervisor retry limit reached; preserving the "
-                    "available evidence."
+                    f"Supervisor retry limit reached for {phase}; "
+                    "preserving the available evidence."
                 ),
             }
         else:
             retries += 1
+            retry_counts[phase] = retries
 
     errors = list(state.get("errors", []))
     if error:
@@ -118,6 +158,8 @@ def supervisor_agent(
 
     return {
         "supervisor_retries": retries,
+        "supervisor_retry_counts": retry_counts,
+        "supervisor_steps": steps,
         "supervisor_decision": {
             "phase": phase,
             **decision_data,

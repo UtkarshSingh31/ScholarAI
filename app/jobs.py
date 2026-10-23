@@ -10,19 +10,6 @@ from app.graph import scholarship_graph
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="scholarai")
 _jobs: dict[str, dict[str, Any]] = {}
 _lock = Lock()
-_NODE_LABELS = {
-    "profile_intelligence": "Profile Intelligence",
-    "supervisor_profile": "Supervisor is deciding whether the profile is ready",
-    "opportunity_hunter": "Opportunity Hunter",
-    "supervisor_hunter": "Supervisor is evaluating search coverage",
-    "evidence": "Evidence Extraction",
-    "supervisor_evidence": "Supervisor is evaluating source coverage",
-    "eligibility_auditor": "Eligibility and Evidence Auditor",
-    "supervisor_auditor": "Supervisor is evaluating audit results",
-    "matchmaker": "Matchmaker",
-    "recommendation_reviewer": "Groq Recommendation Reviewer",
-    "application_coach": "Application Coach",
-}
 
 
 def _next_node(node_name: str, state: dict[str, Any]) -> str:
@@ -81,10 +68,11 @@ def _run_job(job_id: str, state: dict[str, Any]) -> None:
     try:
         _set_job(job_id, status="running")
         latest_state = dict(state)
+        events: list[dict[str, Any]] = []
         _set_job(
             job_id,
             current_node="profile_intelligence",
-            activity="Running Profile Intelligence...",
+            events=events,
         )
 
         for update in scholarship_graph.stream(
@@ -100,19 +88,32 @@ def _run_job(job_id: str, state: dict[str, Any]) -> None:
             next_node = _next_node(node_name, latest_state)
             if next_node:
                 statuses[next_node] = "running"
+            event = {
+                "timestamp": _timestamp(),
+                "node": node_name,
+                "status": "completed",
+                "updated_fields": sorted(
+                    next(iter(update.values()), {}).keys()
+                ),
+                "counts": {
+                    "opportunities": len(latest_state.get("opportunities", [])),
+                    "evidence": len(latest_state.get("evidence", [])),
+                    "eligibility": len(
+                        latest_state.get("eligibility_results", [])
+                    ),
+                    "shortlist": len(latest_state.get("shortlist", [])),
+                    "errors": len(latest_state.get("errors", [])),
+                },
+            }
+            decision = latest_state.get("supervisor_decision", {})
+            if node_name.startswith("supervisor_") and decision:
+                event["decision"] = dict(decision)
+            events.append(event)
             _set_job(
                 job_id,
                 agent_status=statuses,
                 current_node=next_node,
-                activity=(
-                    f"Running {_NODE_LABELS.get(next_node, next_node)}..."
-                    if next_node
-                    else (
-                        f"Completed {_NODE_LABELS.get(node_name, node_name)}."
-                        if node_name
-                        else "Workflow is processing..."
-                    )
-                ),
+                events=list(events),
                 profile_valid=latest_state.get("profile_valid", False),
                 errors=list(latest_state.get("errors", [])),
             )
@@ -138,13 +139,14 @@ def _run_job(job_id: str, state: dict[str, Any]) -> None:
                     "supervisor_decision",
                     {},
                 ),
+                "events": list(events),
                 "agent_status": latest_state.get("agent_status", {}),
                 "errors": latest_state.get("errors", []),
             },
             agent_status=latest_state.get("agent_status", {}),
             errors=latest_state.get("errors", []),
             current_node="",
-            activity="Workflow completed.",
+            events=list(events),
         )
     except Exception as exc:
         _set_job(
@@ -152,7 +154,7 @@ def _run_job(job_id: str, state: dict[str, Any]) -> None:
             status="failed",
             errors=[f"Workflow job failed: {type(exc).__name__}: {exc}"],
             current_node="",
-            activity="Workflow failed.",
+            events=locals().get("events", []),
         )
 
 
@@ -167,7 +169,7 @@ def submit_job(state: dict[str, Any]) -> str:
             "agent_status": dict(state.get("agent_status", {})),
             "errors": [],
             "current_node": "",
-            "activity": "Queued for processing.",
+            "events": [],
         }
     _executor.submit(_run_job, job_id, state)
     return job_id

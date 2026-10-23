@@ -66,3 +66,51 @@ def test_supervisor_stops_after_retry_limit(monkeypatch):
 
     assert result["supervisor_decision"]["next_action"] == "stop"
     assert result["supervisor_retries"] == 2
+
+
+def test_supervisor_bounds_cross_phase_retry_cycle(monkeypatch):
+    class RetryModel:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def with_structured_output(self, *args, **kwargs):
+            return self
+
+        def invoke(self, messages):
+            return type(
+                "Decision",
+                (),
+                {
+                    "next_action": "retry_search",
+                    "reason": "Coverage is weak.",
+                    "model_dump": lambda self: {
+                        "next_action": self.next_action,
+                        "reason": self.reason,
+                    },
+                },
+            )()
+
+    monkeypatch.setattr(supervisor, "ChatGoogleGenerativeAI", RetryModel)
+    state = {
+        "profile_valid": True,
+        "opportunities": [],
+        "evidence": [],
+        "eligibility_results": [],
+        "errors": [],
+        "supervisor_retries": 0,
+        "supervisor_retry_counts": {},
+        "supervisor_steps": 0,
+        "supervisor_decision": {},
+        "agent_status": {},
+    }
+
+    actions = []
+    for phase in ("evidence", "hunter", "evidence", "hunter", "evidence"):
+        result = supervisor.supervisor_agent(state, phase)
+        actions.append(result["supervisor_decision"]["next_action"])
+        state.update(result)
+        if actions[-1] == "stop":
+            break
+
+    assert actions[-1] == "stop"
+    assert state["supervisor_steps"] <= supervisor.MAX_SUPERVISOR_STEPS

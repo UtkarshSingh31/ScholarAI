@@ -88,6 +88,8 @@ def _initial_state(
         },
         "errors": [],
         "supervisor_retries": 0,
+        "supervisor_retry_counts": {},
+        "supervisor_steps": 0,
         "supervisor_decision": {},
     }
 
