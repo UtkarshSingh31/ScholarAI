@@ -150,6 +150,7 @@ async def run_workflow(
         "student_profile": result["student_profile"],
         "profile_evidence": result["profile_evidence"],
         "shortlist": result["shortlist"],
+        "eligibility_results": result.get("eligibility_results", []),
         "review": result["review"],
         "application_draft": result["application_draft"],
         "supervisor_decision": result.get("supervisor_decision", {}),

@@ -104,8 +104,9 @@ def eligibility_auditor_agent(state: ScholarshipState) -> dict[str, Any]:
             # Evaluate only mandatory claims where the profile and source
             # provide directly comparable values.
             decisions: list[bool | None] = []
+            claim_decisions: dict[int, bool | None] = {}
 
-            for claim in supported_claims:
+            for claim_index, claim in enumerate(supported_claims):
                 if not claim.mandatory:
                     continue
 
@@ -129,9 +130,12 @@ def eligibility_auditor_agent(state: ScholarshipState) -> dict[str, Any]:
                         and profile_scale in {"10", "10.0", "10.00"}
                     ):
                         minimum_cgpa = float(score_match.group())
-                        decisions.append(profile["cgpa"] >= minimum_cgpa)
+                        decision = profile["cgpa"] >= minimum_cgpa
+                        decisions.append(decision)
+                        claim_decisions[claim_index] = decision
                     else:
                         decisions.append(None)
+                        claim_decisions[claim_index] = None
                     continue
 
                 if claim.category in {
@@ -139,16 +143,19 @@ def eligibility_auditor_agent(state: ScholarshipState) -> dict[str, Any]:
                     "field_of_study",
                     "graduation_status",
                 }:
-                    decisions.append(_profile_claim_matches(
+                    decision = _profile_claim_matches(
                         claim.category,
                         claim.value,
                         profile,
-                    ))
+                    )
+                    decisions.append(decision)
+                    claim_decisions[claim_index] = decision
                     continue
 
                 # Mandatory criteria such as nationality cannot be treated
                 # as satisfied when the profile has no comparable field.
                 decisions.append(None)
+                claim_decisions[claim_index] = None
 
             if any(decision is False for decision in decisions):
                 status = "does_not_meet"
@@ -166,14 +173,30 @@ def eligibility_auditor_agent(state: ScholarshipState) -> dict[str, Any]:
                     "comparable with the available student profile."
                 )
 
+            requirements = []
+            for claim_index, claim in enumerate(supported_claims):
+                requirement = claim.model_dump()
+                requirement["decision"] = (
+                    "not_evaluated"
+                    if not claim.mandatory
+                    else (
+                        "meets"
+                        if claim_decisions.get(claim_index) is True
+                        else (
+                            "does_not_meet"
+                            if claim_decisions.get(claim_index) is False
+                            else "unknown"
+                        )
+                    )
+                )
+                requirements.append(requirement)
+
             results.append({
                 "opportunity_name": facts.program_name or name,
                 "source_url": url,
                 "status": status,
                 "reason": reason,
-                "requirements": [
-                    claim.model_dump() for claim in supported_claims
-                ],
+                "requirements": requirements,
                 "funding_summary": facts.funding_summary,
                 "deadline": facts.deadline,
             })

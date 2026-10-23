@@ -88,6 +88,16 @@
     a { color: #b8c6ff; overflow-wrap: anywhere; }
     pre { white-space: pre-wrap; overflow-wrap: anywhere; color: #dbe3f7; font: .9rem/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; }
     .subsection { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 18px; }
+    .activity-banner { background: #0d1627; border: 1px solid #405476; border-radius: 10px; padding: 13px; margin-bottom: 12px; }
+    .activity-banner strong { display: block; margin-bottom: 5px; }
+    .eligibility-list { display: grid; gap: 10px; }
+    .eligibility-card { background: var(--panel-soft); border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: 10px; padding: 13px; }
+    .eligibility-card.meets { border-left-color: var(--success); }
+    .eligibility-card.does_not_meet { border-left-color: var(--danger); }
+    .eligibility-card.unknown { border-left-color: var(--warning); }
+    .eligibility-card h4 { margin: 0 0 5px; }
+    .requirement { margin-top: 8px; padding: 9px; border-radius: 7px; background: #0b1322; font-size: .86rem; }
+    .requirement strong { color: var(--warning); }
     #message { min-height: 22px; color: var(--warning); margin: 12px 0 0; }
     .error { color: var(--danger); }
     @media (max-width: 760px) {
@@ -218,12 +228,14 @@
       <div class="panel-heading">
         <div><h2>Search progress</h2><p class="hint">Your workflow will appear here after submission.</p></div>
       </div>
+      <div id="activity" class="activity-banner"><strong>Ready</strong><span class="hint">Submit your profile to start.</span></div>
       <div id="status" class="status"><p class="muted">Ready when you are.</p></div>
     </section>
 
     <section id="results" class="panel results" hidden>
       <div class="panel-heading"><div><h2>Your results</h2><p class="hint">Open the source links and confirm the details before applying.</p></div></div>
       <div id="shortlist" class="cards"></div>
+      <div class="subsection"><h3>Eligibility analysis</h3><p class="hint">This shows exactly which requirements were met, failed, or could not be confirmed. Use the failed and unknown items to improve your profile or verify the official page.</p><div id="eligibility" class="eligibility-list"></div></div>
       <div class="subsection"><h3>Groq review</h3><pre id="review"></pre></div>
       <div class="subsection"><h3>Application draft</h3><pre id="draft"></pre></div>
       <div class="subsection"><h3>Errors and warnings</h3><pre id="errors"></pre></div>
@@ -238,6 +250,21 @@ const statusBox = document.querySelector("#status");
 const results = document.querySelector("#results");
 const fileInput = document.querySelector("#documents");
 const fileList = document.querySelector("#file-list");
+const activity = document.querySelector("#activity");
+
+const stageDetails = {
+  profile_intelligence: "Reading the profile, PDF text, and supplied public URLs.",
+  supervisor_profile: "Deciding whether the profile has enough information to search.",
+  opportunity_hunter: "Searching scholarship and university-funding opportunities in your selected countries.",
+  supervisor_hunter: "Checking whether the search produced enough useful candidates.",
+  evidence: "Extracting source pages and preserving evidence for each opportunity.",
+  supervisor_evidence: "Checking whether enough source content was retrieved.",
+  eligibility_auditor: "Reading requirements and comparing them with your profile.",
+  supervisor_auditor: "Checking whether the eligibility audit is sufficient.",
+  matchmaker: "Ranking only opportunities with verified compatible requirements.",
+  recommendation_reviewer: "Reviewing the shortlist with Groq.",
+  application_coach: "Preparing a grounded application draft from verified evidence."
+};
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -256,9 +283,49 @@ function renderStatus(statuses) {
     const item = document.createElement("div");
     item.className = "agent";
     const label = name.replaceAll("_", " ");
-    item.innerHTML = `<strong>${escapeHtml(label)}</strong><span class="${escapeHtml(value)}"><span class="status-dot"></span>${escapeHtml(value)}</span>`;
+    item.innerHTML = `<strong>${escapeHtml(label)}</strong><span class="${escapeHtml(value)}"><span class="status-dot"></span>${escapeHtml(value)}</span><p class="hint">${escapeHtml(stageDetails[name] || "Processing this workflow stage.")}</p>`;
     statusBox.appendChild(item);
   }
+}
+
+function renderActivity(job) {
+  const node = job.current_node || "";
+  const title = job.activity || (node ? `Running ${node.replaceAll("_", " ")}...` : `Workflow ${job.status || "queued"}.`);
+  activity.innerHTML = `<strong>${escapeHtml(title)}</strong><span class="hint">${escapeHtml(stageDetails[node] || "The workflow is coordinating its specialist agents.")}</span>`;
+}
+
+function renderEligibility(results) {
+  const box = document.querySelector("#eligibility");
+  if (!results.length) {
+    box.innerHTML = '<p class="muted">No eligibility decisions were produced.</p>';
+    return;
+  }
+  box.innerHTML = results.map(item => {
+    const requirements = (item.requirements || []).map(requirement => {
+      if (requirement.decision === "not_evaluated") return "";
+      const advice = {
+        minimum_cgpa: "Check the required CGPA and scale. If your score is below it, this opportunity may not be suitable.",
+        degree_level: "Apply after confirming that your current or target degree level matches the program.",
+        field_of_study: "Add or target a program whose required field matches your academic background.",
+        graduation_status: "Confirm the program's enrollment or graduation timing and update your profile with the exact status.",
+        nationality: "Verify the nationality requirement on the official page and provide the required citizenship information.",
+        deadline: "Confirm the deadline on the official page before investing more time in this opportunity.",
+        other: "Open the official source and provide the missing requirement detail before treating this as a match."
+      }[requirement.category] || "Open the official source and provide the missing requirement detail.";
+      const action = requirement.decision === "does_not_meet"
+        ? `What to improve: ${advice}`
+        : requirement.decision === "unknown"
+          ? `What to do: ${advice}`
+          : "Requirement matched the supplied profile.";
+      return `<div class="requirement"><strong>${escapeHtml(requirement.decision.replaceAll("_", " "))}</strong> · ${escapeHtml(requirement.category)}: ${escapeHtml(requirement.value || requirement.requirement)}<br><span class="hint">${escapeHtml(action)}</span>${requirement.evidence_quote ? `<br><span class="hint">Source: “${escapeHtml(requirement.evidence_quote)}”</span>` : ""}</div>`;
+    }).join("");
+    return `<article class="eligibility-card ${escapeHtml(item.status)}">
+      <h4>${escapeHtml(item.opportunity_name || "Opportunity")} — ${escapeHtml(item.status)}</h4>
+      <p>${escapeHtml(item.reason || "")}</p>
+      ${requirements}
+      ${item.source_url ? `<a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener">Verify official source ↗</a>` : ""}
+    </article>`;
+  }).join("");
 }
 
 function renderResults(job) {
@@ -272,6 +339,7 @@ function renderResults(job) {
         <a href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener">Open official source ↗</a>
       </article>`).join("")
     : '<p class="muted">No eligible recommendations were returned. Review the warnings below and try adding more profile details.</p>';
+  renderEligibility(result.eligibility_results || []);
   document.querySelector("#review").textContent = JSON.stringify(result.review || {}, null, 2);
   document.querySelector("#draft").textContent = result.application_draft || "No draft generated.";
   document.querySelector("#errors").textContent = (result.errors || []).join("\n") || "None";
@@ -282,6 +350,7 @@ async function poll(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Status request failed (${response.status})`);
   const job = await response.json();
+  renderActivity(job);
   renderStatus(job.agent_status);
   message.textContent = `Search ${job.status}.`;
   if (job.status === "completed" || job.status === "failed") {
