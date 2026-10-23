@@ -26,3 +26,7 @@ class ScholarshipState(TypedDict):
 
     # Errors collected during workflow execution
     errors: list[str]
+
+    # Supervisor routing state
+    supervisor_retries: int
+    supervisor_decision: dict[str, Any]

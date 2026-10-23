@@ -79,6 +79,7 @@ def _initial_state(
         "application_draft": "",
         "agent_status": {
             "profile_intelligence": "pending",
+            "supervisor": "pending",
             "opportunity_hunter": "pending",
             "eligibility_evidence_auditor": "pending",
             "matchmaker": "pending",
@@ -86,6 +87,8 @@ def _initial_state(
             "application_coach": "pending",
         },
         "errors": [],
+        "supervisor_retries": 0,
+        "supervisor_decision": {},
     }
 
 
@@ -149,6 +152,7 @@ async def run_workflow(
         "shortlist": result["shortlist"],
         "review": result["review"],
         "application_draft": result["application_draft"],
+        "supervisor_decision": result.get("supervisor_decision", {}),
         "agent_status": result["agent_status"],
         "errors": result["errors"],
     }

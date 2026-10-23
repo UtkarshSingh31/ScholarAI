@@ -81,3 +81,13 @@ class RecommendationReview(BaseModel):
     concerns: list[str] = Field(default_factory=list)
     strengths: list[str] = Field(default_factory=list)
     required_checks: list[str] = Field(default_factory=list)
+
+
+class SupervisorDecision(BaseModel):
+    next_action: Literal[
+        "continue",
+        "retry_search",
+        "retry_evidence",
+        "stop",
+    ]
+    reason: str

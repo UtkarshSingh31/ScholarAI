@@ -26,12 +26,15 @@ def run_case(
         "application_draft": "",
         "agent_status": {
             "profile_intelligence": "pending",
+            "supervisor": "pending",
             "opportunity_hunter": "pending",
             "eligibility_evidence_auditor": "pending",
             "matchmaker": "pending",
             "application_coach": "pending",
         },
         "errors": [],
+        "supervisor_retries": 0,
+        "supervisor_decision": {},
     }
 
     result = scholarship_graph.invoke(initial_state)

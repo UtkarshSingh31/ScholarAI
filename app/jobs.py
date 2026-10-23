@@ -56,6 +56,10 @@ def _run_job(job_id: str, state: dict[str, Any]) -> None:
                     "application_draft",
                     "",
                 ),
+                "supervisor_decision": latest_state.get(
+                    "supervisor_decision",
+                    {},
+                ),
                 "agent_status": latest_state.get("agent_status", {}),
                 "errors": latest_state.get("errors", []),
             },
