@@ -33,9 +33,9 @@ API paths and no separate Vercel frontend or CORS configuration is required.
 
 ## Current architecture
 
-The project is a Python/FastAPI application. The dashboard is a static HTML
-page served by the same FastAPI process, so a separate frontend server or
-frontend build step is not required.
+The project is a Python/FastAPI application with a Vite React dashboard.
+FastAPI serves the built frontend from `frontend/dist` in production and
+falls back to `app/static` when the React build is not present.
 
 ```text
 Browser
@@ -234,6 +234,19 @@ GET /workflow/jobs/{job_id}
 Submit the same multipart fields to `/workflow/jobs`. The response contains a
 `job_id` and `status_url`. Poll the status URL until the job is `completed` or
 `failed`.
+
+The `profile` JSON must include the core intake fields: name, nationality,
+current degree and degree level, graduation status, target degree level,
+target field, target intake/year, funding need, and at least one destination
+country. The target degree and field are used for research; the current degree
+is used for eligibility comparison. Incomplete profiles receive a `422`
+response listing the missing fields instead of starting an unreliable search.
+
+While the job is running, the status response includes `current_node`,
+`agent_status`, and an `events` array. Each event records the completed
+LangGraph node, timestamp, state fields it returned, workflow counts, and any
+Supervisor decision. The dashboard renders this chronological execution
+timeline rather than relying only on generic stage messages.
 
 Background jobs are currently stored in memory. They are lost when the process
 restarts and are not shared between multiple server instances.
