@@ -16,9 +16,15 @@ def _profile_claim_matches(
     profile: dict[str, Any],
 ) -> bool | None:
     if category == "degree_level":
-        profile_value = profile.get("degree")
+        profile_value = profile.get(
+            "target_degree_level",
+            profile.get("degree"),
+        )
     elif category == "field_of_study":
-        profile_value = profile.get("field_of_study")
+        profile_value = profile.get(
+            "target_field",
+            profile.get("field_of_study"),
+        )
     elif category == "graduation_status":
         profile_value = profile.get("graduation_status")
     else:
@@ -163,14 +169,29 @@ def eligibility_auditor_agent(state: ScholarshipState) -> dict[str, Any]:
                     "The student does not meet at least one mandatory "
                     "requirement."
                 )
-            elif decisions and all(decision is True for decision in decisions):
+            degree_evaluated = any(
+                claim.category == "degree_level"
+                and claim.mandatory
+                and claim_decisions.get(index) is not None
+                for index, claim in enumerate(supported_claims)
+            )
+            if (
+                decisions
+                and degree_evaluated
+                and all(decision is True for decision in decisions)
+            ):
                 status = "meets"
                 reason = "All evaluated mandatory requirements are met."
             else:
                 status = "unknown"
                 reason = (
-                    "At least one mandatory requirement is not directly "
-                    "comparable with the available student profile."
+                    "Target degree-level eligibility was not evaluated; "
+                    "the result cannot be marked eligible."
+                    if not degree_evaluated
+                    else (
+                        "At least one mandatory requirement is not directly "
+                        "comparable with the available student profile."
+                    )
                 )
 
             requirements = []

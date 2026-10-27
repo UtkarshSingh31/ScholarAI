@@ -12,8 +12,12 @@ def opportunity_hunter_agent(state: ScholarshipState) -> dict[str, Any]:
         profile.get("preferred_countries", [])
     )
 
-    degree = profile.get("degree", "")
-    field = profile.get("field_of_study", degree)
+    current_degree = profile.get("degree", "")
+    target_degree = profile.get("target_degree_level", current_degree)
+    field = profile.get(
+        "target_field",
+        profile.get("field_of_study", current_degree),
+    )
 
     opportunities = []
     errors = []
@@ -24,7 +28,7 @@ def opportunity_hunter_agent(state: ScholarshipState) -> dict[str, Any]:
             (
                 "scholarships",
                 f"official scholarships for international students in "
-                f"{field}, {country}. Degree level: {degree}. "
+                f"{field}, {country}. Target degree level: {target_degree}. "
                 "Include eligibility, funding, deadlines, and application "
                 "pages.",
             ),
@@ -32,7 +36,7 @@ def opportunity_hunter_agent(state: ScholarshipState) -> dict[str, Any]:
                 "university funding",
                 f"official university funding and funded study programs "
                 f"for international students in {field}, {country}. "
-                f"Degree level: {degree}. Include scholarships, tuition "
+                f"Target degree level: {target_degree}. Include scholarships, tuition "
                 "waivers, funding details, deadlines, and application pages.",
             ),
         )

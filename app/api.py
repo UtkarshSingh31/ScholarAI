@@ -16,7 +16,43 @@ app = FastAPI(
     description="Evidence-backed scholarship discovery workflow.",
     version="0.1.0",
 )
-STATIC_DIR = Path(__file__).parent / "static"
+FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+STATIC_DIR = (
+    FRONTEND_DIST
+    if (FRONTEND_DIST / "index.html").exists()
+    else Path(__file__).parent / "static"
+)
+REQUIRED_PROFILE_FIELDS = {
+    "name": "full name",
+    "nationality": "nationality/citizenship",
+    "degree": "current degree",
+    "current_degree_level": "current degree level",
+    "graduation_status": "graduation status",
+    "target_degree_level": "target degree level",
+    "target_field": "target field",
+    "target_intake": "target intake/year",
+    "budget": "funding need",
+}
+
+
+def _validate_profile_inputs(profile: dict[str, Any]) -> None:
+    missing = [
+        label for key, label in REQUIRED_PROFILE_FIELDS.items()
+        if profile.get(key) is None
+        or (isinstance(profile.get(key), str) and not profile[key].strip())
+    ]
+    countries = profile.get("preferred_countries")
+    if not isinstance(countries, list) or not countries:
+        missing.append("at least one destination country")
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Complete the required profile fields before "
+                "starting scholarship research.",
+                "missing_fields": missing,
+            },
+        )
 
 
 def _parse_json_object(value: str, field_name: str) -> dict[str, Any]:
@@ -100,6 +136,7 @@ async def _read_workflow_inputs(
     documents: list[UploadFile] | None,
 ) -> dict[str, Any]:
     parsed_profile = _parse_json_object(profile, "profile")
+    _validate_profile_inputs(parsed_profile)
     parsed_urls = _parse_url_list(profile_urls)
     document_values = []
 

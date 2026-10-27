@@ -345,6 +345,18 @@ def profile_intelligence_agent(
     if not normalized_profile.get("degree"):
         validation_errors.append("Degree is required.")
 
+    for field, label in (
+        ("name", "Name"),
+        ("nationality", "Nationality"),
+        ("current_degree_level", "Current degree level"),
+        ("graduation_status", "Graduation status"),
+        ("target_degree_level", "Target degree level"),
+        ("target_field", "Target field"),
+        ("target_intake", "Target intake"),
+    ):
+        if not normalized_profile.get(field):
+            validation_errors.append(f"{label} is required.")
+
     cgpa = normalized_profile.get("cgpa")
     if cgpa is not None:
         if not isinstance(cgpa, (int, float)) or isinstance(cgpa, bool):

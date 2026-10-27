@@ -7,11 +7,29 @@ class StudentProfileFacts(BaseModel):
     """Structured facts extracted from student-provided information."""
 
     name: str | None = None
+    nationality: str | None = None
+    country_of_residence: str | None = None
+    birth_year: int | None = None
     degree: str | None = None
+    current_degree_level: str | None = None
     field_of_study: str | None = None
+    institution: str | None = None
     cgpa: float | None = None
     cgpa_scale: str | None = None
     graduation_status: str | None = None
+    graduation_date: str | None = None
+    target_degree_level: str | None = None
+    target_field: str | None = None
+    target_intake: str | None = None
+    preferred_universities: str | None = None
+    research_topic: str | None = None
+    english_test: str | None = None
+    english_score: str | None = None
+    work_experience_years: float | None = None
+    research_experience: str | None = None
+    publications: int | None = None
+    admission_status: str | None = None
+    funding_need: str | None = None
 
     skills: list[str] = Field(default_factory=list)
     projects: list[str] = Field(default_factory=list)

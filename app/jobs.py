@@ -12,6 +12,68 @@ _jobs: dict[str, dict[str, Any]] = {}
 _lock = Lock()
 
 
+def _event_details(
+    node_name: str,
+    update_state: dict[str, Any],
+) -> list[str]:
+    """Create concise, factual activity lines from the node's state update."""
+    details: list[str] = []
+    if node_name == "profile_intelligence":
+        profile = update_state.get("student_profile", {})
+        details.append(
+            f"Profile established for {profile.get('name', 'student')}"
+        )
+        details.append(
+            f"Countries: {', '.join(profile.get('preferred_countries', [])) or 'none'}"
+        )
+        details.append(
+            f"Profile evidence items: {len(update_state.get('profile_evidence', []))}"
+        )
+    elif node_name == "opportunity_hunter":
+        details.append(
+            f"Collected {len(update_state.get('opportunities', []))} unique opportunities"
+        )
+        errors = update_state.get("errors", [])
+        if errors:
+            details.append(f"Warnings recorded: {len(errors)}")
+    elif node_name == "evidence":
+        metadata = update_state.get("extraction_metadata", {})
+        details.append(
+            f"Extracted evidence for {len(update_state.get('evidence', []))} source pages"
+        )
+        details.append(
+            f"Processed {metadata.get('requested_url_count', 0)} URLs in "
+            f"{metadata.get('batch_count', 0)} batch(es)"
+        )
+    elif node_name == "eligibility_auditor":
+        results = update_state.get("eligibility_results", [])
+        counts = {
+            status: sum(item.get("status") == status for item in results)
+            for status in ("meets", "does_not_meet", "unknown")
+        }
+        details.append(
+            f"Audited {len(results)} opportunities: "
+            f"{counts['meets']} pass, {counts['does_not_meet']} fail, "
+            f"{counts['unknown']} unknown"
+        )
+    elif node_name == "matchmaker":
+        details.append(
+            f"Ranked {len(update_state.get('shortlist', []))} verified matches"
+        )
+    elif node_name.startswith("supervisor_"):
+        decision = update_state.get("supervisor_decision", {})
+        if decision:
+            details.append(
+                f"Supervisor action: {decision.get('next_action', 'unknown')}"
+            )
+            details.append(decision.get("reason", "No reason supplied."))
+    elif node_name == "recommendation_reviewer":
+        details.append("Recommendation review completed or was safely skipped.")
+    elif node_name == "application_coach":
+        details.append("Grounded application guidance was prepared.")
+    return details
+
+
 def _next_node(node_name: str, state: dict[str, Any]) -> str:
     if node_name == "profile_intelligence":
         return "supervisor_profile"
@@ -92,8 +154,13 @@ def _run_job(job_id: str, state: dict[str, Any]) -> None:
                 "timestamp": _timestamp(),
                 "node": node_name,
                 "status": "completed",
+                "label": node_name.replace("_", " ").title(),
                 "updated_fields": sorted(
                     next(iter(update.values()), {}).keys()
+                ),
+                "details": _event_details(
+                    node_name,
+                    next(iter(update.values()), {}),
                 ),
                 "counts": {
                     "opportunities": len(latest_state.get("opportunities", [])),
@@ -115,6 +182,7 @@ def _run_job(job_id: str, state: dict[str, Any]) -> None:
                 current_node=next_node,
                 events=list(events),
                 profile_valid=latest_state.get("profile_valid", False),
+                student_profile=latest_state.get("student_profile", {}),
                 errors=list(latest_state.get("errors", [])),
             )
 
@@ -144,6 +212,7 @@ def _run_job(job_id: str, state: dict[str, Any]) -> None:
                 "errors": latest_state.get("errors", []),
             },
             agent_status=latest_state.get("agent_status", {}),
+            student_profile=latest_state.get("student_profile", {}),
             errors=latest_state.get("errors", []),
             current_node="",
             events=list(events),
