@@ -33,7 +33,13 @@ def test_profile_agent_extracts_pdf_and_github_content():
 
     facts = StudentProfileFacts(
         name="Test Student",
+        nationality="Indian",
         degree="B.Tech CSE",
+        current_degree_level="bachelors",
+        graduation_status="graduated",
+        target_degree_level="masters",
+        target_field="Computer Science",
+        target_intake="Fall 2027",
         cgpa=8.2,
         cgpa_scale="10",
         skills=["Python"],

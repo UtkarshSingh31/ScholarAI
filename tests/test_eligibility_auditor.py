@@ -8,6 +8,8 @@ def make_state(**overrides):
     state = {
         "student_profile": {
             "degree": "B.Tech CSE",
+            "target_degree_level": "masters",
+            "target_field": "Computer Science",
             "cgpa": 8.2,
             "cgpa_scale": "10",
         },
@@ -44,7 +46,8 @@ def test_auditor_marks_supported_cgpa_requirement_as_meets():
     with patch("app.nodes.extract_requirements", return_value=facts):
         result = eligibility_auditor_agent(make_state())
 
-    assert result["eligibility_results"][0]["status"] == "meets"
+    assert result["eligibility_results"][0]["status"] == "unknown"
+    assert "degree" in result["eligibility_results"][0]["reason"]
     assert result["eligibility_results"][0]["funding_summary"] == "Full tuition"
     assert result["agent_status"]["eligibility_evidence_auditor"] == "completed"
 
@@ -157,7 +160,9 @@ def test_auditor_evaluates_supported_degree_claim():
     state = make_state(
         student_profile={
             "degree": "Masters Computer Science",
+            "target_degree_level": "masters",
             "field_of_study": "Computer Science",
+            "target_field": "Computer Science",
             "cgpa": 8.2,
             "cgpa_scale": "10",
         },

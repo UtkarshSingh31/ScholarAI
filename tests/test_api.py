@@ -30,6 +30,19 @@ def test_workflow_rejects_invalid_profile_json():
     assert "valid JSON" in response.json()["detail"]
 
 
+def test_workflow_rejects_incomplete_profile():
+    response = client.post(
+        "/workflow",
+        data={
+            "profile": '{"name": "Student", "preferred_countries": ["Canada"]}',
+            "profile_urls": "[]",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "target degree level" in response.json()["detail"]["missing_fields"]
+
+
 def test_workflow_job_rejects_unknown_job():
     response = client.get("/workflow/jobs/does-not-exist")
 
