@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
-from nodes import profile_intelligence_agent
-from schemas import StudentProfileFacts
+from app.nodes import profile_intelligence_agent
+from app.schemas import StudentProfileFacts
 
 
 def test_profile_agent_extracts_pdf_and_github_content():
@@ -50,11 +50,11 @@ def test_profile_agent_extracts_pdf_and_github_content():
 
     with (
         patch(
-            "nodes.extract_pdf_text",
+            "app.nodes.extract_pdf_text",
             return_value="Resume text: Python, Scholarship Finder",
         ),
         patch(
-            "nodes.extract_profile_urls",
+            "app.nodes.extract_profile_urls",
             return_value={
                 "sources": [{
                     "source_url": "https://github.com/example",
@@ -64,7 +64,7 @@ def test_profile_agent_extracts_pdf_and_github_content():
             },
         ),
         patch(
-            "nodes.extract_student_profile",
+            "app.nodes.extract_student_profile",
             return_value=facts,
         ) as extract_profile,
     ):

@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
-from nodes import eligibility_auditor_agent, evidence_node
-from schemas import OpportunityFacts, RequirementClaim
+from app.nodes import eligibility_auditor_agent, evidence_node
+from app.schemas import OpportunityFacts, RequirementClaim
 
 
 def make_state(**overrides):
@@ -43,7 +43,7 @@ def test_auditor_marks_supported_cgpa_requirement_as_meets():
         )],
     )
 
-    with patch("nodes.extract_requirements", return_value=facts):
+    with patch("app.nodes.extract_requirements", return_value=facts):
         result = eligibility_auditor_agent(make_state())
 
     assert result["eligibility_results"][0]["status"] == "unknown"
@@ -91,7 +91,7 @@ def test_evidence_node_preserves_successes_and_failures():
         },
     ])
 
-    with patch("agents.evidence.extract_opportunity_pages", return_value=response):
+    with patch("app.agents.evidence.extract_opportunity_pages", return_value=response):
         result = evidence_node(state)
 
     assert len(result["evidence"]) == 1
@@ -133,7 +133,7 @@ def test_evidence_node_extracts_all_urls_in_batches():
     state = make_state(opportunities=opportunities)
 
     with patch(
-        "agents.evidence.extract_opportunity_pages",
+        "app.agents.evidence.extract_opportunity_pages",
         side_effect=responses,
     ) as extract:
         result = evidence_node(state)
@@ -172,7 +172,7 @@ def test_auditor_evaluates_supported_degree_claim():
         }],
     )
 
-    with patch("nodes.extract_requirements", return_value=facts):
+    with patch("app.nodes.extract_requirements", return_value=facts):
         result = eligibility_auditor_agent(state)
 
     assert result["eligibility_results"][0]["status"] == "meets"

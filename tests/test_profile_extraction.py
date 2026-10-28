@@ -2,7 +2,7 @@
 from io import BytesIO
 import pytest
 from pypdf import PdfWriter
-from tools import extract_pdf_text
+from app.tools import extract_pdf_text
 
 
 def test_extract_pdf_rejects_empty_bytes():

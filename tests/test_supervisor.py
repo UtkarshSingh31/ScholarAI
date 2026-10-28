@@ -1,4 +1,4 @@
-from agents import supervisor
+from app.agents import supervisor
 
 
 def test_supervisor_uses_safe_fallback_when_model_fails(monkeypatch):

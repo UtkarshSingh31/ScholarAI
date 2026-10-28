@@ -1,4 +1,4 @@
-from config import (
+from app.config import (
     ALLOWED_COUNTRIES,
     GEMINI_MODEL,
     GROQ_MODEL,

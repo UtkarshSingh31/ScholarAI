@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from nodes import opportunity_hunter_agent
+from app.nodes import opportunity_hunter_agent
 
 
 def make_state():
@@ -30,7 +30,7 @@ def test_opportunity_hunter_runs_both_searches_and_deduplicates_urls():
     ]
 
     with patch(
-        "agents.hunter.search_opportunities",
+        "app.agents.hunter.search_opportunities",
         return_value=results,
     ) as search:
         result = opportunity_hunter_agent(make_state())
@@ -45,7 +45,7 @@ def test_opportunity_hunter_runs_both_searches_and_deduplicates_urls():
 
 def test_opportunity_hunter_preserves_partial_results_after_search_failure():
     with patch(
-        "agents.hunter.search_opportunities",
+        "app.agents.hunter.search_opportunities",
         side_effect=[
             [{"name": "Scholarship", "source_url": "https://example.org/a"}],
             RuntimeError("search unavailable"),
