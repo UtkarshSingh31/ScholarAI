@@ -1,9 +1,8 @@
 import json
-from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 
 from graph import scholarship_graph
@@ -16,11 +15,16 @@ app = FastAPI(
     description="Evidence-backed scholarship discovery workflow.",
     version="0.1.0",
 )
-FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
-STATIC_DIR = (
-    FRONTEND_DIST
-    if (FRONTEND_DIST / "index.html").exists()
-    else Path(__file__).parent / "static"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://findscholarship.vercel.app",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
 REQUIRED_PROFILE_FIELDS = {
     "name": "full name",
@@ -160,8 +164,12 @@ def health() -> dict[str, str]:
 
 
 @app.get("/", include_in_schema=False)
-def dashboard() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+def service_info() -> dict[str, str]:
+    return {
+        "service": "ScholarAI API",
+        "frontend": "https://findscholarship.vercel.app/",
+        "health": "/health",
+    }
 
 
 @app.post("/workflow")

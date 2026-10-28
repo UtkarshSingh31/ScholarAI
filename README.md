@@ -146,7 +146,7 @@ Do not commit `.env` or paste API keys into source code. The repository ignores
 PowerShell:
 
 ```powershell
-python -m uvicorn app.api:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn api:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Open the dashboard at <http://127.0.0.1:8000/>.
@@ -302,17 +302,16 @@ these exact values:
 | Branch | Your deployment branch, normally `main` |
 | Service name | `scholarai` |
 | Language/runtime | `Python 3` |
-| Root Directory | Leave blank (repository root) |
+| Root Directory | `app` |
 | Build Command | `pip install --upgrade pip && pip install .` |
-| Start Command | `uvicorn app.api:app --host 0.0.0.0 --port $PORT` |
+| Start Command | `uvicorn api:app --host 0.0.0.0 --port $PORT` |
 | Instance type | Free for a demo; paid for a continuously available service |
 | Health Check Path | `/health` |
 | Auto-Deploy | Yes, if you want pushes to deploy automatically |
 
-Do not set the root directory to `app`. The root must contain
-`pyproject.toml`, `README.md`, `render.yaml`, and the `app/` package. Do not
-use `python app/main.py` or `uvicorn main:app`; the correct ASGI target is
-`app.api:app`.
+Set the root directory to `app`. The backend package metadata and Python
+modules are inside that directory. Do not use `python main.py`; the correct
+ASGI target from the `app` root is `api:app`.
 
 #### Render environment variables
 
@@ -370,7 +369,7 @@ The application can also run on Railway, Fly.io, Google Cloud Run, Azure App
 Service, or an Ubuntu VM with systemd and Nginx. Use this production command:
 
 ```bash
-uvicorn app.api:app --host 0.0.0.0 --port "$PORT"
+uvicorn api:app --host 0.0.0.0 --port "$PORT"
 ```
 
 Do not use `--reload` in production.

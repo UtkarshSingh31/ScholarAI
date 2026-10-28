@@ -19,6 +19,9 @@ const NODES = [
   { id: 'eligibility_auditor', label: 'AGT.AUDITOR' },
   { id: 'matchmaker', label: 'SYS.MATCHMAKER' }
 ];
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || 'https://scholarai-amsd.onrender.com'
+).replace(/\/+$/, '');
 
 // --- UI Primitives ---
 
@@ -149,12 +152,15 @@ export default function App() {
     ));
     files.forEach(file => data.append('documents', file));
     try {
-      const response = await fetch('/workflow/jobs', { method: 'POST', body: data });
+      const response = await fetch(`${API_BASE_URL}/workflow/jobs`, {
+        method: 'POST',
+        body: data,
+      });
       const payload = await response.json();
       if (!response.ok) {
         throw new Error(payload.detail?.message || payload.detail || 'Workflow submission failed.');
       }
-      await pollJob(payload.status_url);
+      await pollJob(new URL(payload.status_url, API_BASE_URL).href);
     } catch (requestError) {
       setError(requestError.message);
       setAppState('intake');

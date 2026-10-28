@@ -17,7 +17,26 @@ def test_dashboard_is_served():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "ScholarAI Dashboard" in response.text
+    assert response.json() == {
+        "service": "ScholarAI API",
+        "frontend": "https://findscholarship.vercel.app/",
+        "health": "/health",
+    }
+
+
+def test_vercel_origin_is_allowed_for_api_requests():
+    response = client.options(
+        "/workflow/jobs",
+        headers={
+            "Origin": "https://findscholarship.vercel.app",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == (
+        "https://findscholarship.vercel.app"
+    )
 
 
 def test_workflow_rejects_invalid_profile_json():
