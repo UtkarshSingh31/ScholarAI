@@ -6,9 +6,9 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
-from app.graph import scholarship_graph
-from app.jobs import get_job, submit_job
-from app.observability import LANGSMITH_ENABLED
+from graph import scholarship_graph
+from jobs import get_job, submit_job
+from observability import LANGSMITH_ENABLED
 
 
 app = FastAPI(
