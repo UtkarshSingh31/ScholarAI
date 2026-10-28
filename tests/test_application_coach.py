@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from app.nodes import application_coach_agent
+from nodes import application_coach_agent
 
 
 class FakeResponse:
@@ -39,7 +39,7 @@ def make_state(shortlist=None):
 
 
 def test_application_coach_generates_grounded_review_draft():
-    with patch("app.nodes.ChatGoogleGenerativeAI") as model:
+    with patch("nodes.ChatGoogleGenerativeAI") as model:
         model.return_value.invoke.return_value = FakeResponse()
         result = application_coach_agent(make_state())
 
@@ -62,7 +62,7 @@ def test_application_coach_accepts_structured_text_blocks():
     class BlockResponse:
         content = [{"type": "text", "text": "Grounded draft"}]
 
-    with patch("app.nodes.ChatGoogleGenerativeAI") as model:
+    with patch("nodes.ChatGoogleGenerativeAI") as model:
         model.return_value.invoke.return_value = BlockResponse()
         result = application_coach_agent(make_state())
 

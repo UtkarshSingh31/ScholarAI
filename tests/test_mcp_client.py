@@ -1,11 +1,11 @@
 from unittest.mock import patch
 
-from app import mcp_client
+import mcp_client
 
 
 def test_search_opportunities_uses_mcp_tool_result():
     with patch(
-        "app.mcp_client._call_tool",
+        "mcp_client._call_tool",
         return_value=[{"name": "Example", "source_url": "https://example.org"}],
     ) as call:
         result = mcp_client.search_opportunities("computer science")
@@ -19,7 +19,7 @@ def test_search_opportunities_uses_mcp_tool_result():
 
 def test_extract_opportunity_pages_rejects_invalid_mcp_result():
     with patch(
-        "app.mcp_client._call_tool",
+        "mcp_client._call_tool",
         return_value=[],
     ):
         try:

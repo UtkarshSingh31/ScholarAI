@@ -1,4 +1,4 @@
-from app.nodes import matchmaker_agent
+from nodes import matchmaker_agent
 
 
 def make_state():

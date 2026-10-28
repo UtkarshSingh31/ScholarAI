@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from app.agents.reviewer import recommendation_reviewer_agent
+from agents.reviewer import recommendation_reviewer_agent
 
 
 class FakeReview:
@@ -25,7 +25,7 @@ def test_reviewer_annotates_shortlist_with_groq_review():
         "errors": [],
     }
 
-    with patch("app.agents.reviewer.ChatGroq") as groq:
+    with patch("agents.reviewer.ChatGroq") as groq:
         groq.return_value.with_structured_output.return_value.invoke.return_value = (
             FakeReview()
         )
