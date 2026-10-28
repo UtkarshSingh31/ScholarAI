@@ -4,7 +4,7 @@ from threading import Lock
 from typing import Any
 from uuid import uuid4
 
-from app.graph import scholarship_graph
+from graph import scholarship_graph
 
 
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="scholarai")

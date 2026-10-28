@@ -1,8 +1,8 @@
 from typing import Any
 import json
 
-from app.state import ScholarshipState
-from app.config import GEMINI_MODEL
+from state import ScholarshipState
+from config import GEMINI_MODEL
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 

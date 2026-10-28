@@ -1,9 +1,9 @@
 from typing import Any
 import json
 
-from app.state import ScholarshipState
-from app.config import GEMINI_MODEL, ordered_allowed_countries
-from app.tools import (
+from state import ScholarshipState
+from config import GEMINI_MODEL, ordered_allowed_countries
+from tools import (
     extract_pdf_text,
     extract_profile_urls,
     extract_student_profile,

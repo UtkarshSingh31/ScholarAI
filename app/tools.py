@@ -3,8 +3,8 @@ from pypdf import PdfReader
 from tavily import TavilyClient
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
-from app.schemas import OpportunityFacts, StudentProfileFacts
-from app.config import GEMINI_MODEL
+from schemas import OpportunityFacts, StudentProfileFacts
+from config import GEMINI_MODEL
 import json
 from typing import Any
 

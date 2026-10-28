@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.graph import scholarship_graph
+from graph import scholarship_graph
 
 
 def run_case(

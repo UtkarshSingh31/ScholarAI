@@ -1,9 +1,9 @@
 
 from langgraph.graph import StateGraph, START, END
 
-from app.observability import LANGSMITH_ENABLED
-from app.state import ScholarshipState
-from app.nodes import (
+from observability import LANGSMITH_ENABLED
+from state import ScholarshipState
+from nodes import (
     profile_intelligence_agent,
     opportunity_hunter_agent,
     evidence_node,
@@ -11,8 +11,8 @@ from app.nodes import (
     matchmaker_agent,
     application_coach_agent,
 )
-from app.agents.reviewer import recommendation_reviewer_agent
-from app.agents.supervisor import supervisor_agent
+from agents.reviewer import recommendation_reviewer_agent
+from agents.supervisor import supervisor_agent
 
 
 def _supervisor_route(

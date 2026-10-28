@@ -4,9 +4,9 @@ from typing import Any, Literal
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from app.config import GEMINI_MODEL
-from app.schemas import SupervisorDecision
-from app.state import ScholarshipState
+from config import GEMINI_MODEL
+from schemas import SupervisorDecision
+from state import ScholarshipState
 
 SupervisorPhase = Literal["profile", "hunter", "evidence", "auditor"]
 MAX_RETRIES_PER_PHASE = 2

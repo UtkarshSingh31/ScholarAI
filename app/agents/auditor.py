@@ -1,8 +1,8 @@
 from typing import Any
 import re
 
-from app.state import ScholarshipState
-from app.tools import extract_requirements
+from state import ScholarshipState
+from tools import extract_requirements
 
 
 def _normalized_words(value: object) -> set[str]:

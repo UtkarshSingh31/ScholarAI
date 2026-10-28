@@ -1,10 +1,10 @@
 """Compatibility exports for workflow agent nodes.
 
-Implementations live under app.agents; this module preserves the original
+Implementations live under agents; this module preserves the original
 public imports and test patch points.
 """
 
-from app.tools import (
+from tools import (
     search_web,
     extract_pages,
     extract_requirements,
@@ -14,12 +14,12 @@ from app.tools import (
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from app.agents import profile as _profile
-from app.agents import hunter as _hunter
-from app.agents import auditor as _auditor
-from app.agents import matchmaker as _matchmaker
-from app.agents import application_coach as _application_coach
-from app.agents import evidence as _evidence
+from agents import profile as _profile
+from agents import hunter as _hunter
+from agents import auditor as _auditor
+from agents import matchmaker as _matchmaker
+from agents import application_coach as _application_coach
+from agents import evidence as _evidence
 
 
 def profile_intelligence_agent(state):

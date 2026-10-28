@@ -2,7 +2,7 @@ import json
 
 from mcp.server.fastmcp import FastMCP
 
-from app.tools import extract_pages, search_web
+from tools import extract_pages, search_web
 
 
 mcp = FastMCP("ScholarAI")

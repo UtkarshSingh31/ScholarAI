@@ -1,8 +1,8 @@
 from typing import Any
 import re
 
-from app.state import ScholarshipState
-from app.config import MAX_SHORTLIST_SIZE, ordered_allowed_countries
+from state import ScholarshipState
+from config import MAX_SHORTLIST_SIZE, ordered_allowed_countries
 
 def matchmaker_agent(state: ScholarshipState) -> dict[str, Any]:
     """Rank eligible opportunities using transparent rule-based scoring."""
@@ -134,4 +134,3 @@ def matchmaker_agent(state: ScholarshipState) -> dict[str, Any]:
             "matchmaker": "completed",
         },
     }
-

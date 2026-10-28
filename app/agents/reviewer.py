@@ -1,9 +1,9 @@
 from typing import Any
 import json
 
-from app.schemas import RecommendationReview
-from app.state import ScholarshipState
-from app.config import GROQ_MODEL
+from schemas import RecommendationReview
+from state import ScholarshipState
+from config import GROQ_MODEL
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 

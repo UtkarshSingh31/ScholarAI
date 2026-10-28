@@ -1,7 +1,7 @@
 from typing import Any
 
-from app.state import ScholarshipState
-from app.mcp_client import extract_opportunity_pages
+from state import ScholarshipState
+from mcp_client import extract_opportunity_pages
 
 EXTRACTION_BATCH_SIZE = 20
 

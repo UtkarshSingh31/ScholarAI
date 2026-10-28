@@ -1,8 +1,8 @@
 from typing import Any
 
-from app.state import ScholarshipState
-from app.config import ordered_allowed_countries
-from app.mcp_client import search_opportunities
+from state import ScholarshipState
+from config import ordered_allowed_countries
+from mcp_client import search_opportunities
 
 def opportunity_hunter_agent(state: ScholarshipState) -> dict[str, Any]:
     """Discover scholarship and university-program candidates."""
