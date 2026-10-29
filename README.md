@@ -18,31 +18,37 @@ is reported as `unknown`, not as proof of eligibility.
 
 ## Live deployment
 
-The current combined frontend and backend deployment is:
+The frontend and backend are deployed separately:
 
-<https://scholarai-amsd.onrender.com/>
+- Frontend: <https://findscholarship.vercel.app/>
+- Backend API: <https://scholarai-amsd.onrender.com/>
 
 Useful live endpoints:
 
-- Dashboard: <https://scholarai-amsd.onrender.com/>
+- Frontend dashboard: <https://findscholarship.vercel.app/>
+- Backend service information: <https://scholarai-amsd.onrender.com/>
 - Health: <https://scholarai-amsd.onrender.com/health>
 - API documentation: <https://scholarai-amsd.onrender.com/docs>
 
-Because the dashboard and API share the same origin, the browser uses relative
-API paths and no separate Vercel frontend or CORS configuration is required.
+The Vercel frontend calls the Render API using `VITE_API_BASE_URL`. The
+production default is `https://scholarai-amsd.onrender.com`. FastAPI allows
+the Vercel origin through explicit CORS configuration.
 
 ## Current architecture
 
-The project is a Python/FastAPI application with a Vite React dashboard.
-FastAPI serves the built frontend from `frontend/dist` in production and
-falls back to `app/static` when the React build is not present.
+The project has a Python/FastAPI backend and a separate Vite React frontend.
+Vercel serves the frontend, while Render runs the FastAPI API.
 
 ```text
-Browser
+Student browser
   |
-  | GET / and multipart form submission
+  | Loads React app from Vercel
   v
-FastAPI (app/api.py)
+Vercel frontend (frontend/src/App.jsx)
+  |
+  | POST/GET https://scholarai-amsd.onrender.com
+  v
+FastAPI API (app/api.py)
   |
   v
 LangGraph workflow
@@ -52,7 +58,7 @@ LangGraph workflow
   |-- Groq: shortlist review
   |-- LangSmith: optional tracing
   v
-Dashboard results
+Results rendered in the Vercel dashboard
 ```
 
 Important directories:
@@ -60,7 +66,6 @@ Important directories:
 ```text
 app/
   agents/          Workflow agent implementations
-  static/          Browser dashboard
   api.py           FastAPI application and HTTP endpoints
   graph.py         LangGraph workflow wiring
   jobs.py          In-memory background job execution
@@ -103,15 +108,17 @@ source .venv/bin/activate
 
 ### 2. Install dependencies
 
-Using `uv`:
+Using `uv` from the backend directory:
 
 ```powershell
+Set-Location app
 uv sync
 ```
 
 Using pip:
 
 ```powershell
+Set-Location app
 python -m pip install -e .
 python -m pip install pytest
 ```
@@ -141,15 +148,31 @@ LANGSMITH_PROJECT=ScholarAI
 Do not commit `.env` or paste API keys into source code. The repository ignores
 `.env` by default.
 
-### 4. Start the application
+### 4. Start the backend and frontend
 
-PowerShell:
+Start the backend from the `app` directory:
 
 ```powershell
+Set-Location app
 python -m uvicorn api:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Open the dashboard at <http://127.0.0.1:8000/>.
+In a second terminal, start the React frontend:
+
+```powershell
+Set-Location frontend
+npm install
+npm run dev
+```
+
+Open the dashboard at <http://localhost:5173/>.
+
+The Vite frontend defaults to the deployed Render API. To use the local
+backend, create `frontend/.env.local` with:
+
+```dotenv
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
 
 The interactive API documentation is at <http://127.0.0.1:8000/docs> and the
 health check is at <http://127.0.0.1:8000/health>.
@@ -160,21 +183,9 @@ separately for normal application use.
 
 ## Using the dashboard
 
-1. Open `http://127.0.0.1:8000/`.
-2. Enter a profile as JSON, for example:
-
-   ```json
-   {
-     "name": "Rahul",
-     "degree": "B.Tech CSE",
-     "cgpa": 8.2,
-     "cgpa_scale": "10",
-     "preferred_countries": ["Canada", "Germany", "Singapore"],
-     "budget": "low"
-   }
-   ```
-
-3. Add public profile URLs one per line, such as a GitHub profile.
+1. Open `http://localhost:5173/`.
+2. Complete the structured profile form.
+3. Add public profile URLs, such as a GitHub profile.
 4. Upload optional PDF files such as a resume or marksheet.
 5. Select **Find scholarships**.
 6. Review the agent statuses, shortlist, source links, Groq review,
@@ -265,36 +276,10 @@ paths.
 
 ## Deployment
 
-### Recommended first deployment: Render
+### Backend deployment: Render
 
-Deploy this repository as one Render **Web Service**. The dashboard and API
-run in the same process; do not create a separate frontend service.
-
-#### Option A: deploy from `render.yaml` (recommended)
-
-The repository contains [`render.yaml`](./render.yaml), which already defines
-the service, root directory, Python version, build command, start command,
-health check, and non-secret defaults.
-
-1. Push the repository to GitHub.
-2. In Render, select **New +** → **Blueprint**.
-3. Connect the GitHub repository and select the branch to deploy.
-4. Render detects `render.yaml`. Confirm the service name `scholarai`.
-5. Enter values for the secret variables when Render asks:
-   `TAVILY_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`, and optionally
-   `LANGSMITH_API_KEY`.
-
-   For the currently deployed service, the public application base URL is
-   `https://scholarai-amsd.onrender.com`. It is intentionally not hardcoded into
-   the frontend JavaScript because the combined deployment can use relative paths
-   and local development continues to work with `http://127.0.0.1:8000`.
-6. Select **Apply**. Render installs dependencies, starts Uvicorn, and checks
-   `/health`.
-
-#### Option B: enter the Render fields manually
-
-If creating **New +** → **Web Service** instead of using the Blueprint, use
-these exact values:
+Create a Render **Web Service** manually. Do not rely on or push
+`render.yaml`; configure the service from the Render dashboard.
 
 | Render field | Value |
 |---|---|
@@ -329,7 +314,7 @@ In **Environment → Environment Variables**, add:
 | `LANGSMITH_PROJECT` | `ScholarAI` |
 
 Enter secret values directly in Render. Never commit them to
-[`example.env`](./example.env), GitHub, or `render.yaml`.
+[`example.env`](./example.env) or GitHub.
 
 #### Verify the deployment
 
@@ -347,21 +332,13 @@ The health endpoint should return:
 {"status":"ok"}
 ```
 
-Then submit one small test profile from the dashboard. Watch **Logs** in
-Render if the job fails. Provider errors usually mean a missing/invalid
-environment variable or an exhausted provider quota.
-
-This deployment provides one URL for both the dashboard and API:
-
-```text
-https://scholarai-amsd.onrender.com/
-https://scholarai-amsd.onrender.com/docs
-https://scholarai-amsd.onrender.com/health
-```
+Then open the Vercel frontend and submit one small test profile. Watch
+**Logs** in Render if the job fails. Provider errors usually mean a
+missing/invalid environment variable or an exhausted provider quota.
 
 The MCP server runs as a child process inside the web service, so the deployed
-service must have project dependencies installed and start from the repository
-root. The `pip install .` build command satisfies this requirement.
+service must have project dependencies installed and start from the `app`
+deployment root. The `pip install .` build command satisfies this requirement.
 
 ### Other suitable backend hosts
 
@@ -374,14 +351,24 @@ uvicorn api:app --host 0.0.0.0 --port "$PORT"
 
 Do not use `--reload` in production.
 
-### Frontend deployment options
+### Frontend deployment: Vercel
 
-The current frontend is already served by FastAPI. The simplest production
-setup is one backend service and one public URL.
+Create a Vercel project using the `frontend` directory:
 
-If a separate frontend is desired later, move `app/static/index.html` into a
-dedicated frontend project, configure its API base URL, and add CORS to the
-FastAPI service. That is not necessary for the current application.
+| Vercel field | Value |
+|---|---|
+| Root Directory | `frontend` |
+| Framework Preset | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+
+Set this environment variable in Vercel:
+
+```text
+VITE_API_BASE_URL=https://scholarai-amsd.onrender.com
+```
+
+The backend already allows `https://findscholarship.vercel.app` through CORS.
 
 ## Production considerations
 
@@ -396,7 +383,8 @@ Before treating the demo as a production service:
 - Add a persistent result store if users need to revisit workflows.
 - Use a worker service for long-running jobs rather than a small in-process
   thread pool.
-- Configure CORS only if a separate frontend is introduced.
+- Keep the allowed CORS origins limited to the deployed frontend and local
+  development origins.
 - Monitor provider quotas and LangSmith traces.
 
 ## Provider notes
