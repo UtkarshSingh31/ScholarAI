@@ -3,6 +3,15 @@ from unittest.mock import patch
 from app import mcp_client
 
 
+def test_mcp_server_runs_from_backend_root():
+    parameters = mcp_client._server_parameters()
+
+    assert parameters.cwd == mcp_client.APP_ROOT
+    assert parameters.args == [
+        str(mcp_client.APP_ROOT / "mcp_server.py"),
+    ]
+
+
 def test_search_opportunities_uses_mcp_tool_result():
     with patch(
         "app.mcp_client._call_tool",

@@ -176,3 +176,59 @@ def test_auditor_evaluates_supported_degree_claim():
         result = eligibility_auditor_agent(state)
 
     assert result["eligibility_results"][0]["status"] == "meets"
+
+
+def test_auditor_preserves_definite_mandatory_failure():
+    facts = OpportunityFacts(
+        program_name="Computer Science Scholarship",
+        funding_summary="Tuition support",
+        deadline="1 January 2027",
+        claims=[RequirementClaim(
+            category="degree_level",
+            requirement="Applicants must be enrolled in a PhD",
+            value="PhD",
+            mandatory=True,
+            evidence_quote="enrolled in a PhD",
+        )],
+    )
+    state = make_state(
+        student_profile={
+            "target_degree_level": "masters",
+            "target_field": "Computer Science",
+        },
+        evidence=[{
+            "source_url": "https://example.org/scholarship",
+            "raw_content": "Applicants must be enrolled in a PhD.",
+        }],
+    )
+
+    with patch("app.nodes.extract_requirements", return_value=facts):
+        result = eligibility_auditor_agent(state)
+
+    eligibility = result["eligibility_results"][0]
+    assert eligibility["status"] == "does_not_meet"
+    assert eligibility["requirements"][0]["decision"] == "does_not_meet"
+
+
+def test_auditor_accepts_verified_program_alignment_without_mandatory_claim():
+    facts = OpportunityFacts(
+        program_name="Computer Science Master's Scholarship",
+        funding_summary="Partial tuition support",
+        deadline="1 January 2027",
+        claims=[],
+    )
+    state = make_state(
+        student_profile={
+            "target_degree_level": "masters",
+            "target_field": "Computer Science",
+        },
+        evidence=[{
+            "source_url": "https://example.org/scholarship",
+            "raw_content": "Computer Science Master's Scholarship.",
+        }],
+    )
+
+    with patch("app.nodes.extract_requirements", return_value=facts):
+        result = eligibility_auditor_agent(state)
+
+    assert result["eligibility_results"][0]["status"] == "meets"
