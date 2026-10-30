@@ -8,7 +8,7 @@ from typing import Any
 from mcp import ClientSession, StdioServerParameters, stdio_client
 
 
-APP_ROOT = Path(__file__).resolve().parent.parent
+APP_ROOT = Path(__file__).resolve().parent
 
 
 def _server_parameters() -> StdioServerParameters:
@@ -27,7 +27,7 @@ def _server_parameters() -> StdioServerParameters:
     }
     return StdioServerParameters(
         command=sys.executable,
-        args=["-m", "app.mcp_server"],
+        args=[str(APP_ROOT / "mcp_server.py")],
         cwd=APP_ROOT,
         env=inherited,
     )

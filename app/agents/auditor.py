@@ -50,6 +50,34 @@ def _profile_claim_matches(
     ))
 
 
+def _source_alignment(
+    facts: Any,
+    profile: dict[str, Any],
+) -> tuple[bool, bool]:
+    """Infer degree and field alignment from verified extracted source facts."""
+
+    source_text = " ".join(
+        [
+            str(facts.program_name),
+            *(
+                f"{claim.requirement} {claim.value}"
+                for claim in facts.claims
+            ),
+        ]
+    )
+    degree_aligned = _profile_claim_matches(
+        "degree_level",
+        source_text,
+        profile,
+    )
+    field_aligned = _profile_claim_matches(
+        "field_of_study",
+        source_text,
+        profile,
+    )
+    return degree_aligned is True, field_aligned is True
+
+
 def eligibility_auditor_agent(state: ScholarshipState) -> dict[str, Any]:
     """Extract scholarship requirements and evaluate supported claims."""
 
@@ -163,35 +191,56 @@ def eligibility_auditor_agent(state: ScholarshipState) -> dict[str, Any]:
                 decisions.append(None)
                 claim_decisions[claim_index] = None
 
-            if any(decision is False for decision in decisions):
-                status = "does_not_meet"
-                reason = (
-                    "The student does not meet at least one mandatory "
-                    "requirement."
-                )
             degree_evaluated = any(
                 claim.category == "degree_level"
                 and claim.mandatory
                 and claim_decisions.get(index) is not None
                 for index, claim in enumerate(supported_claims)
             )
-            if (
-                decisions
-                and degree_evaluated
-                and all(decision is True for decision in decisions)
+            source_degree_aligned, source_field_aligned = _source_alignment(
+                facts,
+                profile,
+            )
+            has_definite_failure = any(
+                decision is False for decision in decisions
+            )
+            has_unresolved_mandatory = any(
+                decision is None for decision in decisions
+            )
+
+            if has_definite_failure:
+                status = "does_not_meet"
+                reason = (
+                    "The student does not meet at least one mandatory "
+                    "requirement."
+                )
+            elif has_unresolved_mandatory:
+                status = "unknown"
+                reason = (
+                    "At least one mandatory requirement is not directly "
+                    "comparable with the available student profile."
+                )
+            elif (
+                degree_evaluated
+                or source_degree_aligned
+            ) and (
+                not decisions
+                or all(decision is True for decision in decisions)
             ):
                 status = "meets"
-                reason = "All evaluated mandatory requirements are met."
+                reason = (
+                    "Verified source evidence aligns with the target degree"
+                    + (
+                        " and field."
+                        if source_field_aligned
+                        else "."
+                    )
+                )
             else:
                 status = "unknown"
                 reason = (
-                    "Target degree-level eligibility was not evaluated; "
-                    "the result cannot be marked eligible."
-                    if not degree_evaluated
-                    else (
-                        "At least one mandatory requirement is not directly "
-                        "comparable with the available student profile."
-                    )
+                    "Verified evidence did not establish target degree "
+                    "alignment."
                 )
 
             requirements = []

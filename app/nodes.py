@@ -4,22 +4,38 @@ Implementations live under agents; this module preserves the original
 public imports and test patch points.
 """
 
-from tools import (
-    search_web,
-    extract_pages,
-    extract_requirements,
-    extract_pdf_text,
-    extract_profile_urls,
-    extract_student_profile,
-)
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from agents import profile as _profile
-from agents import hunter as _hunter
-from agents import auditor as _auditor
-from agents import matchmaker as _matchmaker
-from agents import application_coach as _application_coach
-from agents import evidence as _evidence
+if __package__ == "app":
+    from .tools import (
+        search_web,
+        extract_pages,
+        extract_requirements,
+        extract_pdf_text,
+        extract_profile_urls,
+        extract_student_profile,
+    )
+    from .agents import profile as _profile
+    from .agents import hunter as _hunter
+    from .agents import auditor as _auditor
+    from .agents import matchmaker as _matchmaker
+    from .agents import application_coach as _application_coach
+    from .agents import evidence as _evidence
+else:
+    from tools import (
+        search_web,
+        extract_pages,
+        extract_requirements,
+        extract_pdf_text,
+        extract_profile_urls,
+        extract_student_profile,
+    )
+    from agents import profile as _profile
+    from agents import hunter as _hunter
+    from agents import auditor as _auditor
+    from agents import matchmaker as _matchmaker
+    from agents import application_coach as _application_coach
+    from agents import evidence as _evidence
 
 
 def profile_intelligence_agent(state):
