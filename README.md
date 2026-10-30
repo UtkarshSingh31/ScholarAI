@@ -13,8 +13,10 @@ runs a multi-agent workflow to:
 6. Review the shortlist with Groq.
 7. Generate a grounded application draft with Gemini.
 
-The application is intentionally conservative: missing or incomparable evidence
-is reported as `unknown`, not as proof of eligibility.
+The application is evidence-backed: definite contradictions are reported as
+`does_not_meet`, while genuinely missing or incomparable mandatory evidence is
+reported as `unknown`. Verified program alignment can qualify a result when no
+mandatory requirement contradicts the profile.
 
 ## Live deployment
 
