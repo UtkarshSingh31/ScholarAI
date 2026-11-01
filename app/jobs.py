@@ -193,6 +193,8 @@ def _run_job(job_id: str, state: dict[str, Any]) -> None:
                 "profile_valid": latest_state.get("profile_valid", False),
                 "student_profile": latest_state.get("student_profile", {}),
                 "profile_evidence": latest_state.get("profile_evidence", []),
+                "opportunities": latest_state.get("opportunities", []),
+                "evidence": latest_state.get("evidence", []),
                 "eligibility_results": latest_state.get(
                     "eligibility_results",
                     [],

@@ -160,3 +160,10 @@ def build_graph():
 
 
 scholarship_graph = build_graph()
+png_bytes = scholarship_graph.get_graph().draw_mermaid_png()
+
+# 3. Save the bytes to a local image file
+with open("scholarship_graph.png", "wb") as f:
+    f.write(png_bytes)
+
+print("Graph saved successfully as 'scholarship_graph.png'")
