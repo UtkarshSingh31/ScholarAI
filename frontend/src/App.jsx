@@ -10,6 +10,7 @@ const IconTerminal = () => <svg width="16" height="16" viewBox="0 0 24 24" fill=
 const IconActivity = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>;
 const IconDatabase = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>;
 const IconFile = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>;
+const IconHome = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square"><path d="m3 11 9-8 9 8"></path><path d="M5 10v10h14V10"></path></svg>;
 
 const NODES = [
   { id: 'profile_intelligence', label: 'SYS.PROFILE_INIT' },
@@ -99,6 +100,9 @@ export default function App() {
   const [stats, setStats] = useState({ hits: 0, scraped: 0, audited: 0, matches: 0 });
   const [results, setResults] = useState([]);
   const [selectedRecId, setSelectedRecId] = useState(null);
+  const [resultData, setResultData] = useState(null);
+  const [activePanel, setActivePanel] = useState('results');
+  const [requestLog, setRequestLog] = useState([]);
   const [files, setFiles] = useState([]);
   const [error, setError] = useState('');
   
@@ -121,6 +125,9 @@ export default function App() {
     }
     setMissingFields([]);
     setError('');
+    setRequestLog([]);
+    setResultData(null);
+    setActivePanel('results');
     setAppState('running');
     const countries = String(formProfile.preferredCountries || '')
       .split(',')
@@ -152,11 +159,20 @@ export default function App() {
     ));
     files.forEach(file => data.append('documents', file));
     try {
+      const requestStarted = Date.now();
       const response = await fetch(`${API_BASE_URL}/workflow/jobs`, {
         method: 'POST',
         body: data,
       });
       const payload = await response.json();
+      setRequestLog(log => [...log, {
+        id: `submit-${requestStarted}`,
+        time: new Date(requestStarted).toISOString(),
+        method: 'POST',
+        url: '/workflow/jobs',
+        status: response.status,
+        duration: Date.now() - requestStarted,
+      }]);
       if (!response.ok) {
         throw new Error(payload.detail?.message || payload.detail || 'Workflow submission failed.');
       }
@@ -168,8 +184,17 @@ export default function App() {
   };
 
   const pollJob = async (url) => {
+    const requestStarted = Date.now();
     const response = await fetch(url);
     const job = await response.json();
+    setRequestLog(log => [...log, {
+      id: `poll-${requestStarted}`,
+      time: new Date(requestStarted).toISOString(),
+      method: 'GET',
+      url: url.replace(API_BASE_URL, ''),
+      status: response.status,
+      duration: Date.now() - requestStarted,
+    }]);
     if (!response.ok) throw new Error(job.detail || 'Workflow status request failed.');
     const jobEvents = job.events || [];
     setEvents(jobEvents.flatMap(event => (event.details || []).map((msg, index) => ({
@@ -190,18 +215,23 @@ export default function App() {
     if (job.status === 'completed' || job.status === 'failed') {
       if (job.status === 'failed') throw new Error((job.errors || []).join(' ') || 'Workflow failed.');
       const result = job.result || {};
+      setResultData(result);
+      const opportunitiesByUrl = Object.fromEntries(
+        (result.opportunities || []).map(item => [item.source_url, item]),
+      );
       const sourceResults = result.shortlist?.length
         ? result.shortlist
-        : (result.eligibility_results || []).slice(0, 10);
+        : (result.eligibility_results || []);
       const mappedResults = sourceResults.map((item, index) => ({
         id: item.source_url || `match-${index}`,
         name: item.opportunity_name || 'Opportunity',
-        country: item.country || 'Unknown',
+        country: item.country || opportunitiesByUrl[item.source_url]?.country_searched || 'Unknown',
         degreeLevel: profileLabel(item.target_degree_level || item.degree_level),
         field: item.target_field || item.field_of_study || 'Not specified',
         funding: item.funding_summary || 'Not specified',
         deadline: item.deadline || 'Unknown',
         status: item.status === 'does_not_meet' ? 'fails' : item.status || 'unknown',
+        reason: item.reason || 'No audit explanation returned.',
         sourceType: item.source_type || 'source',
         link: item.source_url,
         score: item.ranking_score,
@@ -222,6 +252,16 @@ export default function App() {
       setError(requestError.message);
       setAppState('intake');
     }), 1000);
+  };
+
+  const resetToIntake = () => {
+    setAppState('intake');
+    setEvents([]);
+    setResults([]);
+    setResultData(null);
+    setRequestLog([]);
+    setSelectedRecId(null);
+    setError('');
   };
 
   const profileLabel = value => String(value || '').replaceAll('_', ' ');
@@ -337,10 +377,14 @@ export default function App() {
       {/* Header */}
       <header className="h-14 border-b border-neutral-900 flex items-center justify-between px-6 shrink-0 bg-[#0a0a0a]">
         <div className="flex items-center gap-4">
-          <div className="w-3 h-3 bg-white"></div>
+          <button onClick={resetToIntake} className="w-3 h-3 bg-white hover:bg-blue-400 transition-colors" aria-label="Start a new run"></button>
           <span className="font-mono text-xs text-white uppercase tracking-widest">Scholar.AI Console</span>
         </div>
         <div className="flex items-center gap-6 font-mono text-[10px] uppercase tracking-wider">
+          <button onClick={resetToIntake} className="text-neutral-400 hover:text-white flex items-center gap-2">
+            <IconHome /> NEW RUN
+          </button>
+          <div className="w-px h-4 bg-neutral-800"></div>
           <div className="flex items-center gap-2">
             <span className="text-neutral-500">Status</span>
             {appState === 'running' ? (
@@ -423,6 +467,90 @@ export default function App() {
           </div>
         </div>
       ) : (
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="border-b border-neutral-900 bg-[#080808] px-6 py-4 shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">Run complete</div>
+                <div className="text-sm text-white mt-1">
+                  {resultData?.student_profile?.name || 'Scholarship discovery'} // {resultData?.student_profile?.target_field || 'target not specified'}
+                </div>
+              </div>
+              <div className="flex gap-2 font-mono text-[10px] uppercase">
+                {[
+                  ['results', 'RESULTS'],
+                  ['logs', 'EXECUTION LOG'],
+                  ['requests', 'API REQUESTS'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => setActivePanel(value)}
+                    className={`border px-3 py-2 transition-colors ${activePanel === value ? 'border-white bg-white text-black' : 'border-neutral-800 text-neutral-500 hover:border-neutral-500 hover:text-white'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-4">
+              {[
+                ['OPPORTUNITIES', resultData?.opportunities?.length || stats.hits],
+                ['EVIDENCE', resultData?.evidence?.length || stats.scraped],
+                ['AUDITED', resultData?.eligibility_results?.length || stats.audited],
+                ['MATCHES', resultData?.shortlist?.length || stats.matches],
+                ['WARNINGS', (resultData?.errors || []).length],
+              ].map(([label, value]) => (
+                <div key={label} className="border border-neutral-900 bg-[#0a0a0a] px-3 py-2">
+                  <div className="font-mono text-[9px] text-neutral-600">{label}</div>
+                  <div className="font-mono text-lg text-neutral-200">{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {activePanel === 'logs' ? (
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-black">
+              <div className="max-w-6xl mx-auto border border-neutral-900">
+                <div className="p-3 border-b border-neutral-900 font-mono text-[10px] uppercase text-neutral-500 flex gap-4">
+                  <span className="text-white flex items-center gap-2"><IconTerminal /> COMPLETE EXECUTION LOG</span>
+                  <span>{events.length} EVENTS</span>
+                </div>
+                <div className="p-4 font-mono text-xs leading-relaxed">
+                  {events.map(event => (
+                    <div key={event.id} className="border-b border-neutral-900/70 py-3 last:border-0">
+                      <div className="flex flex-wrap gap-3 text-[10px] uppercase">
+                        <span className="text-neutral-600">{event.time}</span>
+                        <span className="text-blue-400">[{event.node}]</span>
+                      </div>
+                      <div className="text-neutral-300 mt-1">{event.msg}</div>
+                    </div>
+                  ))}
+                  {resultData?.errors?.map((message, index) => (
+                    <div key={`error-${index}`} className="border-b border-red-950/60 py-3 text-red-400">
+                      <span className="text-red-600 mr-3">[ERROR]</span>{message}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : activePanel === 'requests' ? (
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#050505]">
+              <div className="max-w-6xl mx-auto border border-neutral-900 bg-[#0a0a0a]">
+                <div className="p-3 border-b border-neutral-900 font-mono text-[10px] uppercase text-neutral-500">Browser/API request trace</div>
+                <div className="divide-y divide-neutral-900">
+                  {requestLog.map(request => (
+                    <div key={request.id} className="grid grid-cols-[90px_1fr_70px_90px] gap-4 px-4 py-3 font-mono text-xs">
+                      <span className="text-blue-400">{request.method}</span>
+                      <span className="text-neutral-300 break-all">{request.url}</span>
+                      <span className={request.status >= 400 ? 'text-red-400' : 'text-emerald-400'}>{request.status}</span>
+                      <span className="text-neutral-600">{request.duration}ms</span>
+                    </div>
+                  ))}
+                  {!requestLog.length && <div className="p-6 text-sm text-neutral-600">No request telemetry recorded.</div>}
+                </div>
+              </div>
+            </div>
+          ) : (
         /* Results Master-Detail View */
         <div className="flex-1 flex min-h-0">
           
@@ -478,6 +606,20 @@ export default function App() {
                   <h2 className="text-3xl text-white font-medium tracking-tight mb-2">
                     {results.find(r => r.id === selectedRecId).name}
                   </h2>
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <span className={`font-mono text-[10px] uppercase px-2 py-1 border ${
+                      results.find(r => r.id === selectedRecId).status === 'meets'
+                        ? 'text-emerald-400 border-emerald-900/50 bg-emerald-950/20'
+                        : results.find(r => r.id === selectedRecId).status === 'fails'
+                          ? 'text-red-400 border-red-900/50 bg-red-950/20'
+                          : 'text-yellow-400 border-yellow-900/50 bg-yellow-950/20'
+                    }`}>
+                      {results.find(r => r.id === selectedRecId).status}
+                    </span>
+                    <span className="text-sm text-neutral-500">
+                      {results.find(r => r.id === selectedRecId).reason}
+                    </span>
+                  </div>
                   <div className="flex gap-8 border-b border-neutral-900 pb-6 mt-6">
                     <div className="flex flex-col">
                       <span className="font-mono text-[10px] text-neutral-500 uppercase mb-1">Funding Profile</span>
@@ -526,7 +668,9 @@ export default function App() {
                         <div className="col-span-4 flex items-start gap-3">
                           {row.decision === 'meets' && <div className="flex items-center gap-1.5 text-emerald-500 font-mono text-[10px] uppercase border border-emerald-900/50 bg-emerald-950/20 px-2 py-1"><IconCheck /> Authorized</div>}
                           {row.decision === 'fails' && <div className="flex items-center gap-1.5 text-red-500 font-mono text-[10px] uppercase border border-red-900/50 bg-red-950/20 px-2 py-1"><IconX /> Rejected</div>}
+                          {row.decision === 'does_not_meet' && <div className="flex items-center gap-1.5 text-red-500 font-mono text-[10px] uppercase border border-red-900/50 bg-red-950/20 px-2 py-1"><IconX /> Rejected</div>}
                           {row.decision === 'unknown' && <div className="flex items-center gap-1.5 text-yellow-500 font-mono text-[10px] uppercase border border-yellow-900/50 bg-yellow-950/20 px-2 py-1"><IconAlert /> Missing Data</div>}
+                          {row.decision === 'not_evaluated' && <div className="flex items-center gap-1.5 text-neutral-500 font-mono text-[10px] uppercase border border-neutral-800 px-2 py-1">Not Evaluated</div>}
                         </div>
 
                       </div>
@@ -537,8 +681,10 @@ export default function App() {
               </div>
             )}
           </div>
-
         </div>
+            )}
+
+          </div>
       )}
 
       {/* Global Scrollbar Style overrides for Chrome/Safari */}
