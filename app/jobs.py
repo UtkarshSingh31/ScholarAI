@@ -5,6 +5,9 @@ from typing import Any
 from uuid import uuid4
 
 from graph import scholarship_graph
+from persistence import create_job as persist_create_job
+from persistence import get_job as persist_get_job
+from persistence import update_job as persist_update_job
 
 
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="scholarai")
@@ -124,6 +127,7 @@ def _timestamp() -> str:
 def _set_job(job_id: str, **updates: Any) -> None:
     with _lock:
         _jobs[job_id].update(updates, updated_at=_timestamp())
+    persist_update_job(job_id, updates)
 
 
 def _run_job(job_id: str, state: dict[str, Any]) -> None:
@@ -242,6 +246,7 @@ def submit_job(state: dict[str, Any]) -> str:
             "current_node": "",
             "events": [],
         }
+    persist_create_job(job_id, state)
     _executor.submit(_run_job, job_id, state)
     return job_id
 
@@ -249,4 +254,11 @@ def submit_job(state: dict[str, Any]) -> str:
 def get_job(job_id: str) -> dict[str, Any] | None:
     with _lock:
         job = _jobs.get(job_id)
-        return dict(job) if job else None
+        if job is not None:
+            return dict(job)
+    persisted = persist_get_job(job_id)
+    if persisted is not None:
+        with _lock:
+            _jobs[job_id] = persisted
+        return dict(persisted)
+    return None
