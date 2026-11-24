@@ -376,7 +376,11 @@ The backend already allows `https://findscholarship.vercel.app` through CORS.
 
 Before treating the demo as a production service:
 
-- Replace in-memory jobs with Redis, a database, or a managed task queue.
+- PostgreSQL job persistence is supported through
+  `SUPABASE_DATABASE_URL` or `DATABASE_URL`. Supabase SQL migration:
+  `supabase/migrations/20261121180541_create_scholarai_workflow_jobs.sql`.
+- Replace the in-process worker thread pool with Redis, a database-backed
+  queue, or a managed task queue.
 - Add authentication and rate limiting.
 - Enforce upload size, file type, and request time limits.
 - Store uploaded marksheets only temporarily and delete them after processing.
